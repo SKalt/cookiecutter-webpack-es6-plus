@@ -1,21 +1,15 @@
 const webpack = require('webpack');
 const path = require('path');
-const debug = require('debug');
-debug.enable('w*');
-const log = debug('wp-test');
+// const debug = require('debug');
 const wpConfig = require(
   __dirname + '/../{{cookiecutter.project_slug}}/webpack.config.js'
 );
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const fs = require('fs');
-// log(wpConfig());
 const assert = require('assert');
-// baseConfig.entry = path.join(__dirname, 'fixtures'all-syntax.js';
 const baseConfig = wpConfig();
 baseConfig.output.path =__dirname + '/output';
 
 const config = (fileName, base=baseConfig)=>{
-  console.log('\n\nbase:', base, '\n\n');
   const entry = path.join(__dirname, 'fixtures', fileName);
   const config = Object.assign({}, base, {entry});
   config.output.filename = fileName;
@@ -23,16 +17,17 @@ const config = (fileName, base=baseConfig)=>{
 };
 
 /**
- * Checks webpac builds, then checks
- * @param  {[type]} fileName          [description]
- * @param  {[type]} fileTest          [description]
- * @param  {[type]} [base=baseConfig] [description]
- * @return {[type]}                   [description]
+ * Checks webpack builds, then uses a callback to check the transpiled files
+ * @param  {String} fileName a file to transpile
+ * @param  {Function|undefined} fileTest an optional callback on the transpiled
+ * code
+ * @param  {Object} [base=baseConfig] the webpack config object
+ * @return {Promise} a promise that resolves iff the transpilation was
+ * successful.
  */
 function checkWebpack(fileName, fileTest, base=baseConfig) {
   return new Promise((resolve, reject)=>{
     webpack(config(fileName, base), (err, stats)=>{
-      console.log('\n----', base.plugins[1], '---\n');
       if (err) reject(err);
       if (stats.compilation.errors.length > 0) {
         reject(
@@ -53,44 +48,37 @@ function checkWebpack(fileName, fileTest, base=baseConfig) {
   });
 }
 
-describe('webpack', ()=>{
-  describe('Uses babel', ()=>{
-    // it('processing generators correctly', ()=>{
-    //   return checkWebpack('generator-example.js');
-    // }),
-    // it('processing async-await correctly', ()=>{
-    //   return checkWebpack('async-await-example.js');
-    // }),
-    // it('processing es6 module imports correctly', ()=>{
-    //   return checkWebpack(
-    //     'import-module-example.js',
-    //     (text) => assert( text.match(/bar: ?2/g))
-    //   );
-    // }),
-    it('processing object rest spread correctly', ()=>{
-      debug.enable('babel');
-      return checkWebpack('rest-spread-example.js');
-      debug.disable('babel');
+describe('Webpack', ()=>{
+  describe('Transpilation', ()=>{
+    it('processing generators correctly', ()=>{
+      return checkWebpack('generator-example.js');
     }),
-    it('minifying correctly', ()=>{
+    it('processing async-await correctly', ()=>{
+      return checkWebpack('async-await-example.js');
+    }),
+    it('processing es6 module imports correctly', ()=>{
+      return checkWebpack(
+        'import-module-example.js',
+        (text) => assert( text.match(/bar: ?2/g))
+      );
+    }),
+    it('processing object rest spread correctly', ()=>{
+      // debug.enable('babel');
+      return checkWebpack('rest-spread-example.js');
+      // debug.disable('babel');
+    });
+  });
+  describe('Minification', ()=>{
+    it('correctly minifies with uglify', ()=>{
       process.env.NODE_ENV = 'production';
       minifyConfig = wpConfig();
-      minifyConfig.plugins.push(
-        new UglifyJsPlugin({
-          // sourcemap: true,
-          uglifyOptions: {
-            // see https://github.com/webpack-contrib/uglifyjs-webpack-plugin#options
-            ecma: 6
-          }
-        })
-      );
-      console.log('----------------', minifyConfig.plugins);
+      minifyConfig.output.path = __dirname + '/output';
       return checkWebpack(
         'generator-example.js',
         (fileText)=>{
-          console.log(fileText.slice(0, 300));
+          // console.log(fileText.slice(0, 300));
           if (fileText.match(/\/\*\*\*\*\*\*\//)) {
-            assert(false, 'not minified');
+            throw assert.AssertionError('not minified');
           }
         },
         base=minifyConfig
