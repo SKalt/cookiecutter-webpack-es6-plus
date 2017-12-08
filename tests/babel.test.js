@@ -41,6 +41,6 @@ describe('babel', ()=>{
   // UglifygjsPlugin for mangling.
   it('minifies without mangling', ()=>{
     process.env.BABEL_ENV = 'production';
-    checkOutput('import-module-example.js', ({code})=>console.log(code));
+    checkOutput('import-module-example.js');
   });
 });
